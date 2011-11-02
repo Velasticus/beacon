@@ -1,0 +1,13 @@
+name: Beacons
+main: com.regressiongaming.bukkit.plugins.beacon.BeaconPlugin
+version: 0.0.1
+
+commands:
+  beacon:
+    description: Set and modify beacons.
+    usage: |
+           /<command> [beacon name] - Will set/modify a beacon to your current position.
+           /beacon add name [type=type] name [description] - Create a beacon at your current position 
+           /beacon update name [type=type] [description] - Will modify type and/or description of a named beacon.
+           /beacon delete name - Will delete the beacon with the specified name.
+           /beacon list - Will list all beacons you own.
