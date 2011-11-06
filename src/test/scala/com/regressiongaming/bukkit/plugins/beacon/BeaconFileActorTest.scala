@@ -39,7 +39,7 @@ import scalax.file.ramfs.RamFileSystem
 
 @RunWith(classOf[JUnitRunner])
 class BeaconFileActorTest extends Spec with MustMatchers  {
-  val uuid = UUID.randomUUID()
+  val uuid = UUID.fromString("5d200b4a-5427-4374-b345-6203a3e585d1")
   val beacons = Beacon("FirstBeacon", "PlayerOne", uuid, BeaconLoc(1,1,1), "Test description") :: 
                 Beacon("SecondBeacon", "PlayerTwo", uuid, BeaconLoc(1,1,1), "Test description") ::
                 Nil
@@ -49,6 +49,12 @@ class BeaconFileActorTest extends Spec with MustMatchers  {
   val filePathName = filePath.toAbsolute.path
   
   describe("A BeaconFileActor") {
+    it("should start up properly") {
+      val actorRef = TestActorRef[BeaconFileActor].start()
+
+      actorRef.stop()
+    }
+    
     it("should return an error if a filename has not been set") {
       val actorRef = TestActorRef[BeaconFileActor].start()
       
@@ -70,7 +76,7 @@ class BeaconFileActorTest extends Spec with MustMatchers  {
       val actorRef = TestActorRef[BeaconFileActor].start()
       ( actorRef ? SetFileName(filePathName) ).as[BeaconFileMessage] must be (Some(SuccessfulResult()))
       
-      val result = (actorRef ? Load).as[LoadResults]
+      val result = (actorRef ? Load()).as[LoadResults]
       val beaconResults = result.get.beacons
       beaconResults must be (beacons)
     }

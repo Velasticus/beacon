@@ -6,7 +6,10 @@ import org.bukkit.command.Command
 import org.bukkit.Server
 import org.bukkit.plugin.java.JavaPlugin
 
-sealed case class BeaconCommand(val player:CommandSender)
+abstract trait BeaconCommandMsg
+sealed case class BeaconCommandSuccess extends BeaconCommandMsg
+sealed case class BeaconCommandError(error:String = null) extends BeaconCommandMsg
+sealed case class BeaconCommand(val player:CommandSender) extends BeaconCommandMsg
 sealed case class UsageBeaconCommand(override val player:CommandSender, error:String) extends BeaconCommand(player)
 
 case class AddBeaconCommand(override val player:Player, beaconType:String, beaconName:String, desc:String) extends BeaconCommand(player)

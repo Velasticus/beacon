@@ -2,69 +2,53 @@ package com.regressiongaming.bukkit.plugins.beacon
 
 import java.io.File
 import java.net.URI
-
 import org.bukkit.configuration.file.YamlConfiguration
-
 import akka.actor.scala2ActorRef
 import akka.actor.Actor
+import akka.util.duration._
+import org.bukkit.configuration.file.FileConfiguration
+import org.bukkit.plugin.java.JavaPlugin
+import akka.actor.Actor.Timeout
 
 sealed trait BeaconConfigMessage
 
-case class BeaconConfigNotInitialized extends BeaconConfigMessage
-case class BeaconConfigSuccess extends BeaconConfigMessage
-case class SetConfigFile(loc:String) extends BeaconConfigMessage
-case class SetConfigURI(uri:URI) extends BeaconConfigMessage
-case class SaveConfig extends BeaconConfigMessage
-case class LoadConfig extends BeaconConfigMessage
-case class ReloadConfig extends BeaconConfigMessage
-case class GetValue(key:String) extends BeaconConfigMessage
-case class GetValueOrElse(key:String, default:String) extends BeaconConfigMessage
-case class GetValueResult(value:String) extends BeaconConfigMessage
-case class ItemNotFound extends BeaconConfigMessage
-case class SetValue(key:String,value:String) extends BeaconConfigMessage
+case class BCM_NotInitialized extends BeaconConfigMessage
+case class BCM_Success extends BeaconConfigMessage
+case class BCM_SaveConfig extends BeaconConfigMessage
+case class BCM_ReloadConfig extends BeaconConfigMessage
+case class BCM_GetValue(key:String) extends BeaconConfigMessage
+case class BCM_GetValueOrElse(key:String, default:String) extends BeaconConfigMessage
+case class BCM_GetValueResult(value:String) extends BeaconConfigMessage
+case class BCM_ItemNotFound extends BeaconConfigMessage
+case class BCM_SetValue(key:String,value:String) extends BeaconConfigMessage
 
-class BeaconConfigActor extends Actor {
-  var beaconConfig : YamlConfiguration = new YamlConfiguration()
-  var file : File = null
+class BeaconConfigActor(plugin : JavaPlugin) extends Actor {
+  var beaconConfig : FileConfiguration = null
+
+  override def preStart = {
+    beaconConfig = plugin.getConfig()
+  }
   
+  implicit val timeout = Timeout(60 seconds)
+
   def receive = {
-    case SetConfigFile(name) => setConfigFile(name)
-    case SetConfigURI(uri) => setConfigFile(uri)
-    case _ => self reply BeaconConfigNotInitialized()
-  }
-  
-  def receiveConfigured : Receive = {
-    case SetConfigFile(name) => {
-      file = new File(name)
-      beaconConfig = YamlConfiguration.loadConfiguration(file)
-      self reply BeaconConfigSuccess()
+    case BCM_SaveConfig() => {
+      plugin.saveConfig()
+      self reply BCM_Success()
     }
-    case SetConfigURI(uri) => beaconConfig = YamlConfiguration.loadConfiguration(uri.toURL().openStream())
-    case SaveConfig => {
-      if (file != null)
-        beaconConfig.save(file)
+    case BCM_ReloadConfig() => {
+      plugin.reloadConfig()
+      self reply BCM_Success()
     }
-    case GetValue(key) => { val result = beaconConfig.getString(key) 
-      self reply (if (result!=null) GetValueResult(result) else ItemNotFound())
+    case BCM_GetValue(key) => { 
+      val result = beaconConfig.getString(key) 
+      self reply (if (result!=null) BCM_GetValueResult(result) else BCM_ItemNotFound())
     }
-    case GetValueOrElse(key,default) => self reply GetValueResult(beaconConfig.getString(key,default))
-    case SetValue(key,value) => {
+    case BCM_GetValueOrElse(key,default) => self reply BCM_GetValueResult(beaconConfig.getString(key,default))
+    case BCM_SetValue(key,value) => {
       beaconConfig.set(key,value)
-      self reply BeaconConfigSuccess()
+      self reply BCM_Success()
     }
-  }
-  
-  def setConfigFile(name:String) = {
-    file = new File(name)
-    beaconConfig = YamlConfiguration.loadConfiguration(file)
-    self reply BeaconConfigSuccess()
-    become(receiveConfigured orElse receive)
-  }
-  
-  def setConfigFile(uri:URI) = {
-    beaconConfig = YamlConfiguration.loadConfiguration(uri.toURL().openStream())
-    self reply BeaconConfigSuccess()
-    become(receiveConfigured orElse receive)    
   }
   
 }

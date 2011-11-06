@@ -2,64 +2,68 @@ package com.regressiongaming.bukkit.plugins.beacon
 
 import scala.collection.TraversableOnce.flattenTraversableOnce
 import scala.collection.mutable.HashMap
-import org.bukkit.entity.Player
 import akka.actor.actorRef2Scala
 import akka.actor.Actor
+import akka.actor.Actor._
 import akka.actor.ActorRef
+import akka.util.duration._
 import org.bukkit.command.CommandSender
+import org.bukkit.entity.Player
+import akka.actor.UntypedActor
+import akka.actor.UntypedChannel
 
 class BeaconCommandActor extends Actor {
   private var beacons = HashMap[String,HashMap[String,Beacon]]()
-  private var beaconFileActor = Actor.actorOf[BeaconFileActor]
-    
+  private var beaconFileActor = Actor.actorOf[BeaconFileActor].start()
+
   override def preStart = {
+    implicit val timeout = Timeout(60 seconds)
     val config = Actor.registry.actorFor[BeaconConfigActor].get
-    ( config ? GetValue("beacon.json_file") ).as[BeaconConfigMessage] match {
-      case Some(GetValueResult(value)) => ( beaconFileActor ? SetFileName(value) ).as[BeaconFileMessage] match {
+    ( config ? BCM_GetValue("beacon.json_file") ).as[BeaconConfigMessage] match {
+      case Some(BCM_GetValueResult(value)) => ( beaconFileActor ? SetFileName(value) ).as[BeaconFileMessage] match {
         case Some(SuccessfulResult()) => ( beaconFileActor ? Load() ).as[BeaconFileMessage] match {
           case Some(LoadResults(beaconList)) => beaconList.foreach(b =>
             beacons.getOrElseUpdate(b.playerName,HashMap[String,Beacon]())(b.name) = b
           )
           case Some(ErrorResult(error)) => throw new RuntimeException("Error starting Beacon command actor: " + error)
-          case _ => throw new RuntimeException("Error starting Beacon command actor")
+          case x : Any => throw new RuntimeException("Error starting Beacon command actor: " + x.toString)
         }
-        case _ => throw new RuntimeException("Error starting Beacon command actor")
+        case x : Any => throw new RuntimeException("Error starting Beacon command actor: " + x.toString)
       }
-      case _ => throw new RuntimeException("Error starting Beacon command actor")
+      case x : Any => throw new RuntimeException("Error starting Beacon command actor: " + x.toString)
     }
   }
   
   def receive = {
-    case cmd : AddBeaconCommand => addBeacon(cmd)
-    case cmd : DeleteBeaconCommand => delBeacon(cmd)
+    case cmd : AddBeaconCommand => addBeacon(self.channel, cmd)
+    case cmd : DeleteBeaconCommand => delBeacon(self.channel, cmd)
     case cmd : ListBeaconCommand => listBeacons(cmd.player)
     case cmd : UsageBeaconCommand => usage(cmd.player)
     case cmd : BeaconCommand => usage(cmd.player)
   }
 
-  def addBeacon( cmd:AddBeaconCommand ) : Unit = addBeacon(cmd.player, cmd.beaconType, cmd.beaconName, cmd.desc)
+  def addBeacon( sender:UntypedChannel, cmd:AddBeaconCommand ) : Unit = addBeacon(sender, cmd.player, cmd.beaconType, cmd.beaconName, cmd.desc)
   
-  def addBeacon( player:Player, beaconType:String, beaconName:String, desc:String) : Unit = {
+  def addBeacon( sender:UntypedChannel, player:Player, beaconType:String, beaconName:String, desc:String) : Unit = {
     val curr = beacons.getOrElse(player.getName,HashMap[String,Beacon]()).getOrElse(beaconName, null)
 //    if ( curr != null ) {
 //      val perm = this.getServer().getPluginManager().getPermission("beacon.overwrite")
 //    }
-    val playerId = player.getUniqueId
+
     val loc = player.getLocation
-    val beacon = Beacon(beaconName, player.getName, playerId, loc.getX, loc.getY, loc.getZ, desc)
+    val beacon = Beacon(beaconName, player.getName, player.getUniqueId, loc.getX, loc.getY, loc.getZ, desc)
     beacons.getOrElseUpdate(player.getName,HashMap[String,Beacon]())(beaconName) = beacon
-    val beaconsList = beacons.valuesIterator.map( _.values ).flatten
-    (beaconFileActor ? Save(beacons.valuesIterator.map( _.values ).flatten.toList)).onResult {
-      case SuccessfulResult => player.sendRawMessage("[beacon] - Added beacon named " + beaconName + " at " + beacon.loc )
+    save(sender, player, "Added beacon named " + beaconName + " at " + beacon.loc)    
+  }
+  
+  def delBeacon( sender:UntypedChannel, player: Player, name: String ) : Unit = {
+    beacons.getOrElse(player.getName,HashMap[String,Beacon]()).remove(name) match {
+      case Some(beacon) => save(sender, player, "Removed beacon " + name + " at " + beacon.loc)
+      case None => sender ! BeaconCommandError("Beacon " + name + " not found")
     }
-    
   }
   
-  def delBeacon( player: Player, name: String ) : Unit = {
-    beacons.getOrElse(player.getName,HashMap[String,Beacon]()).remove(name);
-  }
-  
-  def delBeacon( cmd:DeleteBeaconCommand ) : Unit = delBeacon(cmd.player, cmd.beaconName) 
+  def delBeacon( sender:UntypedChannel, cmd:DeleteBeaconCommand ) : Unit = delBeacon(sender, cmd.player, cmd.beaconName) 
   
   def listBeacons ( player: Player ) : Unit = {
       beacons.getOrElse(player.getName,HashMap[String,Beacon]()).values.foreach( beacon => player.sendMessage("[beacon] " + beacon.name + " @" + beacon.loc + " - " + beacon.desc ))
@@ -70,6 +74,19 @@ class BeaconCommandActor extends Actor {
   def usage( player: CommandSender, error: String ) : Unit = {
     player.sendMessage("[beacon]: Error - " + error)
     usage(player)
+  }
+  
+  def save(sender:UntypedChannel, player:Player, msg:String) = {
+    (beaconFileActor ? Save(beacons.valuesIterator.map( _.values ).flatten.toList)).onResult ({
+      case res : SuccessfulResult => {
+        if (msg != null) player.sendRawMessage("[beacon] - " + msg )
+        sender ! BeaconCommandSuccess()
+      }
+      case res : Any => {
+        player.sendRawMessage("[beacon] - Error: " + res.toString)
+        sender ! BeaconCommandError()
+      }
+    })
   }
   
   val usages =
