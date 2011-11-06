@@ -37,7 +37,7 @@ class BeaconCommandActor extends Actor {
   def receive = {
     case cmd : AddBeaconCommand => addBeacon(self.channel, cmd)
     case cmd : DeleteBeaconCommand => delBeacon(self.channel, cmd)
-    case cmd : ListBeaconCommand => listBeacons(cmd.player)
+    case cmd : ListBeaconCommand => listBeacons(self.channel, cmd.player)
     case cmd : UsageBeaconCommand => usage(cmd.player)
     case cmd : BeaconCommand => usage(cmd.player)
   }
@@ -65,25 +65,26 @@ class BeaconCommandActor extends Actor {
   
   def delBeacon( sender:UntypedChannel, cmd:DeleteBeaconCommand ) : Unit = delBeacon(sender, cmd.player, cmd.beaconName) 
   
-  def listBeacons ( player: Player ) : Unit = {
+  def listBeacons ( sender:UntypedChannel, player: Player ) : Unit = {
       beacons.getOrElse(player.getName,HashMap[String,Beacon]()).values.foreach( beacon => player.sendMessage("[beacon] " + beacon.name + " @" + beacon.loc + " - " + beacon.desc ))
+      sender ! BeaconCommandSuccess()
   }
  
-  def usage( player: CommandSender ) = usages.foreach(msg => player.sendMessage("[beacon]: "+msg))
+  def usage( player: CommandSender ) = usages.foreach(msg => player.sendMessage("[beacon] "+msg))
   
   def usage( player: CommandSender, error: String ) : Unit = {
-    player.sendMessage("[beacon]: Error - " + error)
+    player.sendMessage("[beacon] Error - " + error)
     usage(player)
   }
   
   def save(sender:UntypedChannel, player:Player, msg:String) = {
     (beaconFileActor ? Save(beacons.valuesIterator.map( _.values ).flatten.toList)).onResult ({
       case res : SuccessfulResult => {
-        if (msg != null) player.sendRawMessage("[beacon] - " + msg )
+        if (msg != null) player.sendMessage("[beacon] " + msg )
         sender ! BeaconCommandSuccess()
       }
       case res : Any => {
-        player.sendRawMessage("[beacon] - Error: " + res.toString)
+        player.sendMessage("[beacon] Error: " + res.toString)
         sender ! BeaconCommandError()
       }
     })

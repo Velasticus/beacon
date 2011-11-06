@@ -1,8 +1,8 @@
 package com.regressiongaming.bukkit.plugins.beacon
 
 import org.junit.runner.RunWith
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
+import org.mockito.Mockito._
+import org.mockito.Matchers._
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.BeforeAndAfter
@@ -52,7 +52,7 @@ class BeaconCommandActorTest extends Spec with MustMatchers with MockitoSugar wi
       val ret = value.as[BeaconCommandMsg]
       ret match {
           case Some(BeaconCommandSuccess()) => {
-		      verify(player).sendRawMessage("[beacon] - Added beacon named NEW TEST BEACON at (1,1,1)")
+		      verify(player).sendMessage("[beacon] Added beacon named NEW TEST BEACON at (1,1,1)")
 		      verify(player, times(3)).getName // Are these really passing conditions? They seem extraneous
 		      verify(player).getLocation
 		      verify(loc).getX
@@ -79,7 +79,7 @@ class BeaconCommandActorTest extends Spec with MustMatchers with MockitoSugar wi
       val ret = value.as[BeaconCommandMsg]
       ret match {
           case Some(BeaconCommandSuccess()) => {
-		      verify(player).sendRawMessage("[beacon] - Removed beacon Beacon1 at (1,1,1)")
+		      verify(player).sendMessage("[beacon] Removed beacon Beacon1 at (1,1,1)")
 		      verify(player).getName // Is this really a passing condition? It seems extraneous
 		      
 		      val beaconsWritten = BeaconFileActor.readBeaconsFromFile(filePath)
@@ -92,6 +92,27 @@ class BeaconCommandActorTest extends Spec with MustMatchers with MockitoSugar wi
       
     }
     
+    it("should list the beacons that a player has created") {
+      val loc = mockLocation()
+      val player = mockPlayer(loc)
+      val actorRef = Actor.actorOf[BeaconCommandActor].start()
+
+      implicit val timeout = Timeout(60 seconds)
+      val value = actorRef ? ListBeaconCommand(player)
+      val ret = value.as[BeaconCommandMsg]
+      ret match {
+        case Some(BeaconCommandSuccess()) => {
+          // There should have been 10 beacons for this player
+          // Note: This doesn't test for order - and beacons don't come back in order, yet
+		  verify(player,times(10)).sendMessage(matches("\\[beacon\\] Beacon\\d+ @\\(\\d+,\\d+,\\d+\\) - .*"))
+        }
+        case msg : Any => fail(msg.toString)
+      }
+      
+      actorRef.stop()
+      
+    }
+
   }
   
 }
