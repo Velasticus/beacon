@@ -103,8 +103,8 @@ class BeaconCommandActorTest extends Spec with MustMatchers with MockitoSugar wi
       ret match {
         case Some(BeaconCommandSuccess()) => {
           // There should have been 10 beacons for this player
-          // Note: This doesn't test for order - and beacons don't come back in order, yet
-		  verify(player,times(10)).sendMessage(matches("\\[beacon\\] Beacon\\d+ @\\(\\d+,\\d+,\\d+\\) - .*"))
+          for ( i <- 0 to 9)
+            verify(player).sendMessage("[beacon] Beacon%1$d @(%1$d,%1$d,%1$d) - Test description".format(i*10 + 1))
         }
         case msg : Any => fail(msg.toString)
       }

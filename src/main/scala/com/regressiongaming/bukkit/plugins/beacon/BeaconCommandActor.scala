@@ -66,8 +66,10 @@ class BeaconCommandActor extends Actor {
   def delBeacon( sender:UntypedChannel, cmd:DeleteBeaconCommand ) : Unit = delBeacon(sender, cmd.player, cmd.beaconName) 
   
   def listBeacons ( sender:UntypedChannel, player: Player ) : Unit = {
-      beacons.getOrElse(player.getName,HashMap[String,Beacon]()).values.foreach( beacon => player.sendMessage("[beacon] " + beacon.name + " @" + beacon.loc + " - " + beacon.desc ))
-      sender ! BeaconCommandSuccess()
+    // This is one heck of a line: It gets the beacons for a player (defaulting to an empty map),
+    // converts them to a list which it then sorts and then sends a message to the player for each one
+    beacons.getOrElse(player.getName,HashMap[String,Beacon]()).values.toList.sortBy(b=>b.name).foreach( beacon => player.sendMessage("[beacon] " + beacon.name + " @" + beacon.loc + " - " + beacon.desc ))
+    sender ! BeaconCommandSuccess()
   }
  
   def usage( player: CommandSender ) = usages.foreach(msg => player.sendMessage("[beacon] "+msg))
