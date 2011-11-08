@@ -47,6 +47,16 @@
   </properties>
  
   <dependencies>
+
+    <!-- The scala compiler is only needed to build. It should not be a runtime dep -->
+    <dependency>
+    	<groupId>org.scala-lang</groupId>
+    	<artifactId>scala-compiler</artifactId>
+    	<version>${scala.version}</version>
+    	<scope>provided</scope>
+    </dependency>
+
+    <!-- Need to depend on the scala library -->
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
@@ -56,11 +66,73 @@
     	<groupId>org.bukkit</groupId>
     	<artifactId>bukkit</artifactId>
     	<version>0.0.1-SNAPSHOT</version>
+    	<scope>provided</scope>
     </dependency>
     <dependency>
     	<groupId>org.slf4j</groupId>
     	<artifactId>slf4j-jcl</artifactId>
     	<version>1.6.2</version>
+    </dependency>
+
+	<!-- Akka deps -->
+    <dependency>
+    	<groupId>se.scalablesolutions.akka</groupId>
+    	<artifactId>akka-actor</artifactId>
+    	<version>${akka.version}</version>
+    </dependency>
+    <!-- Omit unsed akka libs for now, they explode the size of the shaded jar
+    <dependency>
+    	<groupId>se.scalablesolutions.akka</groupId>
+    	<artifactId>akka-typed-actor</artifactId>
+    	<version>${akka.version}</version>
+    </dependency>
+    <dependency>
+    	<groupId>se.scalablesolutions.akka</groupId>
+    	<artifactId>akka-remote</artifactId>
+    	<version>${akka.version}</version>
+    </dependency>
+    <dependency>
+    	<groupId>se.scalablesolutions.akka</groupId>
+    	<artifactId>akka-stm</artifactId>
+    	<version>${akka.version}</version>
+    </dependency>
+    <dependency>
+    	<groupId>se.scalablesolutions.akka</groupId>
+    	<artifactId>akka-http</artifactId>
+    	<version>${akka.version}</version>
+    </dependency>
+     -->
+    <dependency>
+    	<groupId>se.scalablesolutions.akka</groupId>
+    	<artifactId>akka-testkit</artifactId>
+    	<version>1.2</version>
+    	<scope>test</scope>
+    </dependency>
+    
+    <!-- ScalaIO deps -->
+    <dependency>
+    	<groupId>com.github.scala-incubator.io</groupId>
+    	<artifactId>scala-io-file_2.9.1</artifactId>
+    	<version>0.2.0</version>
+    </dependency>
+    <dependency>
+    	<groupId>com.github.scala-incubator.io</groupId>
+    	<artifactId>scala-io-core_2.9.1</artifactId>
+    	<version>0.2.0</version>
+    </dependency>
+    
+    <!-- A better json lib than the built-in scala one -->
+    <dependency>
+    	<groupId>com.twitter</groupId>
+    	<artifactId>json</artifactId>
+    	<version>2.1.4</version>
+    	<exclusions>
+    	    <!-- This should have only been in the test scope to start with, com.twitter:json is leaking it -->
+    		<exclusion>
+    			<artifactId>specs_2.8.0</artifactId>
+    			<groupId>org.scala-tools.testing</groupId>
+    		</exclusion>
+    	</exclusions>
     </dependency>
 
     <!-- Test -->
@@ -83,65 +155,16 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-    	<groupId>javax.servlet</groupId>
-    	<artifactId>servlet-api</artifactId>
-    	<version>2.5</version>
-    </dependency>
-    <dependency>
-    	<groupId>se.scalablesolutions.akka</groupId>
-    	<artifactId>akka-actor</artifactId>
-    	<version>${akka.version}</version>
-    </dependency>
-    <dependency>
-    	<groupId>se.scalablesolutions.akka</groupId>
-    	<artifactId>akka-typed-actor</artifactId>
-    	<version>${akka.version}</version>
-    </dependency>
-    <dependency>
-    	<groupId>se.scalablesolutions.akka</groupId>
-    	<artifactId>akka-remote</artifactId>
-    	<version>${akka.version}</version>
-    </dependency>
-    <dependency>
-    	<groupId>se.scalablesolutions.akka</groupId>
-    	<artifactId>akka-stm</artifactId>
-    	<version>${akka.version}</version>
-    </dependency>
-    <dependency>
-    	<groupId>se.scalablesolutions.akka</groupId>
-    	<artifactId>akka-http</artifactId>
-    	<version>${akka.version}</version>
-    </dependency>
-    <dependency>
-    	<groupId>se.scalablesolutions.akka</groupId>
-    	<artifactId>akka-testkit</artifactId>
-    	<version>1.2</version>
-    	<scope>test</scope>
-    </dependency>
-    <dependency>
-    	<groupId>com.github.scala-incubator.io</groupId>
-    	<artifactId>scala-io-file_2.9.1</artifactId>
-    	<version>0.2.0</version>
-    </dependency>
-    <dependency>
-    	<groupId>com.github.scala-incubator.io</groupId>
-    	<artifactId>scala-io-core_2.9.1</artifactId>
-    	<version>0.2.0</version>
-    </dependency>
-    <dependency>
-    	<groupId>org.scala-lang</groupId>
-    	<artifactId>scala-compiler</artifactId>
-    	<version>${scala.version}</version>
-    </dependency>
-    <dependency>
-    	<groupId>com.twitter</groupId>
-    	<artifactId>json</artifactId>
-    	<version>2.1.4</version>
-    </dependency>
-    <dependency>
     	<groupId>org.mockito</groupId>
     	<artifactId>mockito-all</artifactId>
     	<version>1.9.0-rc1</version>
+    	<scope>test</scope>
+    </dependency>
+    <dependency>
+    	<groupId>javax.servlet</groupId>
+    	<artifactId>servlet-api</artifactId>
+    	<version>2.5</version>
+    	<scope>provided</scope>
     </dependency>
   </dependencies>
 
@@ -183,6 +206,26 @@
             <include>**/*Suite.*</include>
           </includes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+<!--                   <include>org.xerial:sqlite-jdbc</include> -->
+                </includes>
+              </artifactSet>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
