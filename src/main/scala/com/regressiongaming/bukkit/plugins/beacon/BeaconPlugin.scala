@@ -44,6 +44,12 @@ class BeaconPlugin extends JavaPlugin {
   }
   
   override def onDisable = {
+    
+    entityListener = null
+    playerListener = null
+    
+    beaconCommandActor.stop()
+
     logInfo("Beacon is disabled.")
   }
   
