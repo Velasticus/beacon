@@ -29,7 +29,7 @@ class BeaconPlugin extends JavaPlugin {
 
   private var beaconCommandActor = Actor.actorOf[BeaconCommandActor]
 
-  def onEnable = {
+  override def onEnable = {
 
     beaconCommandActor.start()
     
@@ -37,27 +37,20 @@ class BeaconPlugin extends JavaPlugin {
     
 //    val beaconsFile = config.getString("beaconsFile", "beacons.json")
     
-//    getServer().getPluginManager().registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this)
+      getServer().getPluginManager().registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this)
 //    logInfo("Beacon version " + getDescription().getVersion() + " enabled")
   }
   
-  def onDisable = {
-    writeBeaconsToFile("test")
+  override def onDisable = {
     logInfo("Beacon is disabled.")
   }
   
   override def onCommand(sender:CommandSender, command:Command, commandLabel:String, args:Array[String]) : Boolean = {
     val cmd = BeaconCommand(sender, command, commandLabel, args)
+    (beaconCommandActor ? cmd)
     true
   }
-  
-  private def writeBeaconsToFile(fileName : String) {
-    //val beaconList : JSONArray = beacons.flatten( a => a._2.values ).toList
-    //val s = beaconList.toString()
-    //logInfo(s)
-    //s
-  }
-  
+   
   def logInfo(msg:String) = logger.info(msg)
   def logWarning(msg:String) = logger.warn(msg)
 
