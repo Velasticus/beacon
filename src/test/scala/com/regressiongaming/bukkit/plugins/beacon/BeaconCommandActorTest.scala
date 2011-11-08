@@ -92,6 +92,20 @@ class BeaconCommandActorTest extends Spec with MustMatchers with MockitoSugar wi
       
     }
     
+    it("should fail to delete a beacon that is missing") {
+      val loc = mockLocation()
+      val player = mockPlayer(loc)
+      val actorRef = Actor.actorOf[BeaconCommandActor].start()
+
+      implicit val timeout = Timeout(60 seconds)
+      val value = actorRef ? DeleteBeaconCommand(player, "BeaconMissing")
+      val ret = value.as[BeaconCommandMsg]
+      ret must be (Some(BeaconCommandError("Beacon BeaconMissing not found")))
+      
+      actorRef.stop()
+      
+    }
+    
     it("should list the beacons that a player has created") {
       val loc = mockLocation()
       val player = mockPlayer(loc)
