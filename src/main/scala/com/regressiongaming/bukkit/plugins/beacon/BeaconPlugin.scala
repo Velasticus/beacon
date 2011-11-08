@@ -14,6 +14,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.yaml.snakeyaml.util.ArrayStack
 import akka.actor.Actor
+import org.bukkit.event.Listener
 
 /**
  * @author ${user.name}
@@ -25,20 +26,21 @@ class PermissionDeniedException(message : String) extends RuntimeException(messa
 class BeaconPlugin extends JavaPlugin {
   
   val logger = LoggerFactory.getLogger("Minecraft.Beacons")
-  val playerListener = new BeaconPlayerListener(this)
-
+  var playerListener : Listener = null
+  var entityListener : Listener = null
+  
   private var beaconCommandActor = Actor.actorOf[BeaconCommandActor]
 
   override def onEnable = {
-
     beaconCommandActor.start()
+  
+    playerListener = BeaconPlayerListener(this)
+    entityListener = BeaconEntityListener(beaconCommandActor)
     
-//    val config = getConfig()
-    
-//    val beaconsFile = config.getString("beaconsFile", "beacons.json")
-    
-      getServer().getPluginManager().registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this)
-//    logInfo("Beacon version " + getDescription().getVersion() + " enabled")
+    getServer().getPluginManager().registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this)
+    getServer().getPluginManager().registerEvent(Event.Type.ENTITY_DEATH, entityListener, Priority.Monitor, this)
+
+    logInfo("Beacon version " + getDescription().getVersion() + " enabled")
   }
   
   override def onDisable = {
