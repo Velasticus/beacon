@@ -13,6 +13,6 @@ import org.bukkit.event.player.PlayerJoinEvent
  */
 class BeaconPlayerListener(val plugin : JavaPlugin) extends PlayerListener {
 	override def onPlayerJoin(event:PlayerJoinEvent) = {
-		event.getPlayer().sendMessage("Beacons welcomes you!")
+		event.getPlayer().sendMessage("Beacon welcomes you!")
 	}
 }
