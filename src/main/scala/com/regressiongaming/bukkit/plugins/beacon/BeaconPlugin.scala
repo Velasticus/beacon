@@ -55,7 +55,10 @@ class BeaconPlugin extends JavaPlugin {
   
   override def onCommand(sender:CommandSender, command:Command, commandLabel:String, args:Array[String]) : Boolean = {
     val cmd = BeaconCommand(sender, command, commandLabel, args)
-    (beaconCommandActor ? cmd)
+    (beaconCommandActor ? cmd) onResult {
+      case BeaconCommandSuccess() => true
+      case BeaconCommandError(msg) => sender.sendMessage("[beacon] Error:" + msg)
+    }
     true
   }
    
