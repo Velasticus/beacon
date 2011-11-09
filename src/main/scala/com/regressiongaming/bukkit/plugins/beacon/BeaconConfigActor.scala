@@ -16,6 +16,8 @@ case class BCM_NotInitialized extends BeaconConfigMessage
 case class BCM_Success extends BeaconConfigMessage
 case class BCM_SaveConfig extends BeaconConfigMessage
 case class BCM_ReloadConfig extends BeaconConfigMessage
+case class BCM_GetPlugin extends BeaconConfigMessage
+case class BCM_GetPluginResult(plugin:JavaPlugin) extends BeaconConfigMessage
 case class BCM_GetValue(key:String) extends BeaconConfigMessage
 case class BCM_GetValueOrElse(key:String, default:String) extends BeaconConfigMessage
 case class BCM_GetValueResult(value:String) extends BeaconConfigMessage
@@ -32,6 +34,7 @@ class BeaconConfigActor(plugin : JavaPlugin) extends Actor {
   implicit val timeout = Timeout(60 seconds)
 
   def receive = {
+    case BCM_GetPlugin() => self reply BCM_GetPluginResult(plugin)
     case BCM_SaveConfig() => {
       plugin.saveConfig()
       self reply BCM_Success()

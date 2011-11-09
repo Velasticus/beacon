@@ -44,6 +44,15 @@ class BeaconConfigActorTest extends Spec with MustMatchers  {
       actorRef.stop()
     }
     
+    it("should return a pointer to the creating plugin when requested") {
+      val actorRef = TestActorRef(new BeaconConfigActor(plugin)).start()
+
+      val value = (actorRef ? BCM_GetPlugin()).as[BeaconConfigMessage]
+      value must be (Some(BCM_GetPluginResult(plugin)))
+      
+      actorRef.stop()
+    }
+
     it("should return a default value if a requested key is not in the config and a default is provided") {
       val actorRef = TestActorRef(new BeaconConfigActor(plugin)).start()
 
