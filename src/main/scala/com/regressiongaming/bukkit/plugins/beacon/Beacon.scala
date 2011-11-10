@@ -17,6 +17,10 @@ class BeaconLoc( val x:Double, val y:Double, val z:Double ) {
 }
 
 class Beacon( val name: String, val playerName: String, val playerId: UUID, val loc: BeaconLoc, val desc:String = "" ) {  
+  override def toString() : String = {
+    return "(%s,%s,%s,%s,'%s')".format(name,playerName,playerId.toString,loc.toString,desc) 
+  }
+
   override def equals(that: Any) = that match {
     case beacon : Beacon => beacon.name == name && beacon.playerName == playerName && beacon.playerId == playerId && beacon.desc == desc && beacon.loc == loc
     case _ => false    
