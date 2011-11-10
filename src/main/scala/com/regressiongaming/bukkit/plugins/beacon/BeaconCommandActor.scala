@@ -9,17 +9,24 @@ import akka.actor.ActorRef
 import akka.util.duration._
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
+import org.bukkit.plugin.java.JavaPlugin
 import akka.actor.UntypedActor
 import akka.actor.UntypedChannel
+import org.bukkit.Material
 
 class BeaconCommandActor extends Actor {
   private var beacons = HashMap[String,HashMap[String,Beacon]]()
   private var beaconFileActor = Actor.actorOf[BeaconFileActor].start()
-
+  private var beaconConfigActor : ActorRef = null
+  private var plugin : JavaPlugin = null
+  
   override def preStart = {
     implicit val timeout = Timeout(60 seconds)
-    val config = Actor.registry.actorFor[BeaconConfigActor].get
-    ( config ? BCM_GetValue("beacon.json_file") ).as[BeaconConfigMessage] match {
+    beaconConfigActor = Actor.registry.actorFor[BeaconConfigActor].get
+    plugin = (beaconConfigActor ? BCM_GetPlugin()).as[BCM_GetPluginResult].get.plugin
+
+    ( beaconConfigActor ? BCM_GetValue("beacon.json_file") ).as[BeaconConfigMessage] match {
       case Some(BCM_GetValueResult(value)) => ( beaconFileActor ? SetFileName(value) ).as[BeaconFileMessage] match {
         case Some(SuccessfulResult()) => ( beaconFileActor ? Load() ).as[BeaconFileMessage] match {
           case Some(LoadResults(beaconList)) => beaconList.foreach(b =>
@@ -38,6 +45,7 @@ class BeaconCommandActor extends Actor {
     case cmd : AddBeaconCommand => addBeacon(self.channel, cmd)
     case cmd : DeleteBeaconCommand => delBeacon(self.channel, cmd)
     case cmd : ListBeaconCommand => listBeacons(self.channel, cmd.player)
+    case cmd : PlayerDeathBeaconCommand => handlePlayerDeath(self.channel, cmd.player)
     case cmd : UsageBeaconCommand => usage(cmd.player)
     case cmd : BeaconCommand => usage(cmd.player)
   }
@@ -70,6 +78,28 @@ class BeaconCommandActor extends Actor {
     // converts them to a list which it then sorts and then sends a message to the player for each one
     beacons.getOrElse(player.getName,HashMap[String,Beacon]()).values.toList.sortBy(b=>b.name).foreach( beacon => player.sendMessage("[beacon] " + beacon.name + " @" + beacon.loc + " - " + beacon.desc ))
     sender ! BeaconCommandSuccess()
+  }
+ 
+  def handlePlayerDeath ( sender:UntypedChannel, player: Player ) : Unit = {
+    var loc = player.getLocation
+    var inv = player.getInventory
+    if (!inv.contains(Material.COMPASS))
+      inv.addItem(new ItemStack(Material.COMPASS,1))
+    var tgt = player.getCompassTarget()
+    
+    // Create a beacon to represent the players old compass target and add it to the beacon map IF
+    // one hasn't already been added (getOrElseUpdate trickery). We want to track their initial
+    // compass target, without wiping it out if they die more than once before retrieving their corpse.
+    val tgtBeacon = Beacon(player.getName, player.getName, player.getUniqueId, tgt.getX, tgt.getY, tgt.getZ, "Initial compass target")
+    beacons.getOrElseUpdate("compass_targets",HashMap[String,Beacon]()).getOrElseUpdate(player.getName,tgtBeacon)
+    
+    // TODO I think I need to either track multiple corpse targets for a player or their first one
+    // It stands to reason that the first corpse target would be the one with the most valuable gear
+    player.setCompassTarget(loc)
+    val beacon = Beacon("CORPSE", player.getName, player.getUniqueId, loc.getX, loc.getY, loc.getZ, "Corpse marker")
+    beacons.getOrElseUpdate(player.getName,HashMap[String,Beacon]())("CORPSE") = beacon
+    
+    save(sender, player, "A beacon was created where you died and a compass pointing there has been added to your inventory")
   }
  
   def usage( player: CommandSender ) = usages.foreach(msg => player.sendMessage("[beacon] "+msg))

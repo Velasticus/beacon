@@ -7,7 +7,6 @@ import org.scalatest.matchers.MustMatchers
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.BeforeAndAfter
 import org.scalatest.Spec
-
 import com.twitter.json.Json
 import Beacon.BeaconsToList
 import akka.actor.Actor.Timeout
@@ -17,6 +16,8 @@ import akka.testkit.TestActorRef
 import akka.util.duration.intToDurationInt
 import scalax.file.Path
 import org.scalatest.junit.JUnitRunner
+import org.bukkit.Material
+import org.bukkit.inventory.ItemStack
 
 @RunWith(classOf[JUnitRunner])
 class BeaconCommandActorTest extends Spec with MustMatchers with MockitoSugar with BukkitMocks with BeforeAndAfter {
@@ -127,6 +128,32 @@ class BeaconCommandActorTest extends Spec with MustMatchers with MockitoSugar wi
       
     }
 
+  }
+  
+  it("should place a beacon where a player has died and give them a compass pointing to it") {
+    val loc = mockLocation()
+    val player = mockPlayer(loc)
+    val actorRef = Actor.actorOf[BeaconCommandActor].start()
+
+    implicit val timeout = Timeout(60 seconds)
+    val ret = (actorRef ? PlayerDeathBeaconCommand(player)).as[BeaconCommandMsg]
+    ret match {
+        case Some(BeaconCommandSuccess()) => {
+        verify(player).sendMessage("[beacon] A beacon was created where you died and a compass pointing there has been added to your inventory")
+        
+        verify(player).getInventory // Need to check this first, since we will call it next
+        
+        verify(player.getInventory).contains(Material.COMPASS) // This checks that we CALLED contains, not that the inv DOES contain a compass
+        verify(player.getInventory).addItem( isA(classOf[ItemStack]) )
+
+        val beaconsWritten = BeaconFileActor.readBeaconsFromFile(filePath)
+        beaconsWritten must contain (Beacon("CORPSE", "Player1", defaultUUID, BeaconLoc(1,1,1), "Corpse marker"))
+        }
+        case msg : Any => throw new RuntimeException("Failed" + msg.toString)
+    }
+    
+    actorRef.stop()
+    
   }
   
 }

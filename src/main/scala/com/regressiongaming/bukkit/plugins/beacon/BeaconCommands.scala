@@ -18,6 +18,8 @@ case class DeleteBeaconCommand(override val player:Player, beaconName:String) ex
 
 case class ListBeaconCommand(override val player:Player) extends BeaconCommand(player)
 
+case class PlayerDeathBeaconCommand(override val player:Player) extends BeaconCommand(player)
+
 object BeaconCommand {
   def apply (sender:CommandSender, command:Command, commandLabel:String, args:Array[String]) : BeaconCommand = {
     var argsBuffer = List.fromArray(args)
