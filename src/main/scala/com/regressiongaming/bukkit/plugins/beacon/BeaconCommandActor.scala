@@ -90,16 +90,25 @@ class BeaconCommandActor extends Actor {
     // Create a beacon to represent the players old compass target and add it to the beacon map IF
     // one hasn't already been added (getOrElseUpdate trickery). We want to track their initial
     // compass target, without wiping it out if they die more than once before retrieving their corpse.
-    val tgtBeacon = Beacon(player.getName, player.getName, player.getUniqueId, tgt.getX, tgt.getY, tgt.getZ, "Initial compass target")
-    beacons.getOrElseUpdate("compass_targets",HashMap[String,Beacon]()).getOrElseUpdate(player.getName,tgtBeacon)
-    
-    // TODO I think I need to either track multiple corpse targets for a player or their first one
+    val tgtBeacon = Beacon(player.getName, "compass_targets", player.getUniqueId, tgt.getX, tgt.getY, tgt.getZ, "Initial compass target")
+    val compass_targets = beacons.getOrElseUpdate("compass_targets",HashMap[String,Beacon]())
+
     // It stands to reason that the first corpse target would be the one with the most valuable gear
-    player.setCompassTarget(loc)
-    val beacon = Beacon("CORPSE", player.getName, player.getUniqueId, loc.getX, loc.getY, loc.getZ, "Corpse marker")
-    beacons.getOrElseUpdate(player.getName,HashMap[String,Beacon]())("CORPSE") = beacon
+    compass_targets.get(player.getName) match {
+      case None => {
+        compass_targets.put(player.getName,tgtBeacon)
+        player.setCompassTarget(loc)
+        val beacon = Beacon("CORPSE", player.getName, player.getUniqueId, loc.getX, loc.getY, loc.getZ, "Corpse marker")
+        beacons.getOrElseUpdate(player.getName,HashMap[String,Beacon]())("CORPSE") = beacon
+        
+        save(sender, player, "A beacon was created where you died and a compass pointing there has been added to your inventory")
+      }
+      case Some(tgt) => {
+        player.sendMessage("[beacon] A beacon could not be created marking the spot you died since you already have one. Type /beacon delete CORPSE to reset it")
+        sender ! BeaconCommandError("A corpse beacon already exists for this player")
+      }
+    }
     
-    save(sender, player, "A beacon was created where you died and a compass pointing there has been added to your inventory")
   }
  
   def usage( player: CommandSender ) = usages.foreach(msg => player.sendMessage("[beacon] "+msg))
