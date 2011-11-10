@@ -1,19 +1,19 @@
 package com.regressiongaming.bukkit.plugins.beacon
 
-import org.mockito.Mockito._
-import org.mockito.Matchers._
-import org.scalatest.mock.MockitoSugar
-import org.bukkit.entity.Player
-import org.bukkit.Location
 import java.util.UUID
-import org.bukkit.configuration.file.YamlConfiguration
-import org.mockito.stubbing.Answer
-import org.mockito.invocation.InvocationOnMock
-import scala.collection.generic.MutableMapFactory
+
 import scala.collection.mutable.HashMap
-import org.bukkit.plugin.java.JavaPlugin
-import org.bukkit.inventory.Inventory
+
+import org.bukkit.configuration.file.YamlConfiguration
+import org.bukkit.entity.Player
 import org.bukkit.inventory.PlayerInventory
+import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.Location
+import org.mockito.Matchers.anyString
+import org.mockito.Mockito.when
+import org.mockito.invocation.InvocationOnMock
+import org.mockito.stubbing.Answer
+import org.scalatest.mock.MockitoSugar
 
 trait BukkitMocks extends MockitoSugar {
   
