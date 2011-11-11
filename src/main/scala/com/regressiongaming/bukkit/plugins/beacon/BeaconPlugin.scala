@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory
 import org.yaml.snakeyaml.util.ArrayStack
 import akka.actor.Actor
 import org.bukkit.event.Listener
+import akka.actor.ActorRef
 
 /**
  * @author ${user.name}
@@ -29,9 +30,11 @@ class BeaconPlugin extends JavaPlugin {
   var playerListener : Listener = null
   var entityListener : Listener = null
   
+  private var beaconConfigActor = Actor.actorOf(new BeaconConfigActor(this))
   private var beaconCommandActor = Actor.actorOf[BeaconCommandActor]
 
   override def onEnable = {
+    beaconConfigActor.start()
     beaconCommandActor.start()
   
     playerListener = BeaconPlayerListener(this)
