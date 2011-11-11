@@ -12,6 +12,7 @@ import scalax.io.SeekableResource
 import java.io.Closeable
 import java.net.URI
 import akka.actor.Actor.Timeout
+import org.slf4j.LoggerFactory
 
 sealed trait BeaconFileMessage
 
@@ -59,19 +60,26 @@ object BeaconFileActor {
   def saveBeaconsToFile(beacons:List[Beacon], file:Path) = {
     val beaconList : List[Map[String,Any]] = beacons
     val s = Json.build(beaconList).toString
-    
+
+    if ( !file.exists ) {
+      val logger = LoggerFactory.getLogger("Minecraft.Beacons")
+      logger.debug("Creating beacons file: " + file.toAbsolute)
+      file.createFile(true,false)
+    }
     file.truncate(0)
     file.write(s)
   }
   
-  def readBeaconsFromFile(file:Path) = {
-      val s = file.slurpString
-      val jo = Json.parse(s)
-      val b = jo match {
-        case l : List[Map[String,Any]] => Beacon(l)
-        case m : Map[String,Any] => Beacon(m) :: Nil
-        case _ => Beacon(jo.asInstanceOf[List[Map[String,Any]]])
-      }
-      b    
+  def readBeaconsFromFile(file:Path) : List[Beacon] = {
+    if ( !file.exists )
+      return Beacon(List())
+    val s = file.slurpString
+    val jo = Json.parse(s)
+    val b = jo match {
+      case l : List[Map[String,Any]] => Beacon(l)
+      case m : Map[String,Any] => Beacon(m) :: Nil
+      case _ => Beacon(jo.asInstanceOf[List[Map[String,Any]]])
+    }
+    b    
   }
 }

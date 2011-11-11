@@ -20,7 +20,7 @@ class BeaconFileActorTest extends Spec with MustMatchers  {
                 Nil
   
   val tmpDir = Path.createTempDirectory()
-  val filePath = tmpDir./("beacons.json").createFile()
+  val filePath = tmpDir./("beacons.json")
   val filePathName = filePath.toAbsolute.path
   
   describe("A BeaconFileActor") {
@@ -35,6 +35,17 @@ class BeaconFileActorTest extends Spec with MustMatchers  {
       
       (actorRef ? Load()).as[BeaconFileMessage] must be (Some(ErrorResult("Filename is not set")))
       (actorRef ? Save(beacons)).as[BeaconFileMessage] must be (Some(ErrorResult("Filename is not set")))
+      actorRef.stop()
+    }
+
+    it("should accept a filename and create the file upon write if it does not yet exist") {
+      filePath.delete(true)
+      val actorRef = TestActorRef[BeaconFileActor].start()
+      ( actorRef ? SetFileName(filePathName) ).as[BeaconFileMessage] must be (Some(SuccessfulResult()))
+      
+      val result = (actorRef ? Save(beacons)).as[BeaconFileMessage]
+      result must be (Some(SuccessfulResult()))
+      filePath.exists must be (true)
       actorRef.stop()
     }
 
@@ -54,6 +65,16 @@ class BeaconFileActorTest extends Spec with MustMatchers  {
       val result = (actorRef ? Load()).as[LoadResults]
       val beaconResults = result.get.beacons
       beaconResults must be (beacons)
+    }
+
+    it("should accept a filename and return an empty list of beacons if the file wasn't created yet") {
+      filePath.deleteIfExists(true)
+      val actorRef = TestActorRef[BeaconFileActor].start()
+      ( actorRef ? SetFileName(filePathName) ).as[BeaconFileMessage] must be (Some(SuccessfulResult()))
+      
+      val result = (actorRef ? Load()).as[LoadResults]
+      val beaconResults = result.get.beacons
+      beaconResults must be (List())
     }
   }
 }
