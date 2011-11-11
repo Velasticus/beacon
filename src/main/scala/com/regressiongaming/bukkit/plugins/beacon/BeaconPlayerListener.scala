@@ -27,7 +27,8 @@ case class BeaconEntityListener(val beaconCommandActor : ActorRef) extends Entit
   
 	override def onEntityDeath(event:EntityDeathEvent) = {
 	  event.getEntity() match {
-	    case p:Player => p.sendMessage("I'm sorry you died")
+	    case p:Player => beaconCommandActor ! PlayerDeathBeaconCommand(p)
+	    case _ =>
 	  }
 	}
 
